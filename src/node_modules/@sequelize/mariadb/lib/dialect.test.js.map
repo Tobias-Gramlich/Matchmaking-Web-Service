@@ -1,0 +1,7 @@
+{
+  "version": 3,
+  "sources": ["../src/dialect.test.ts"],
+  "sourcesContent": ["import { Sequelize } from '@sequelize/core';\nimport type { MariaDbConnectionOptions } from '@sequelize/mariadb';\nimport { MariaDbDialect } from '@sequelize/mariadb';\nimport { expect } from 'chai';\n\ndescribe('MariaDbDialect#parseConnectionUrl', () => {\n  const dialect = new Sequelize({ dialect: MariaDbDialect }).dialect;\n\n  it('parses connection URL', () => {\n    const options: MariaDbConnectionOptions = dialect.parseConnectionUrl(\n      'mariadb://user:password@localhost:1234/dbname?charset=utf8mb4',\n    );\n\n    expect(options).to.deep.eq({\n      host: 'localhost',\n      port: 1234,\n      user: 'user',\n      password: 'password',\n      database: 'dbname',\n      charset: 'utf8mb4',\n    });\n  });\n});\n"],
+  "mappings": ";AAAA,kBAA0B;AAE1B,qBAA+B;AAC/B,kBAAuB;AAEvB,SAAS,qCAAqC,MAAM;AAClD,QAAM,UAAU,IAAI,sBAAU,EAAE,SAAS,8BAAe,CAAC,EAAE;AAE3D,KAAG,yBAAyB,MAAM;AAChC,UAAM,UAAoC,QAAQ;AAAA,MAChD;AAAA,IACF;AAEA,4BAAO,OAAO,EAAE,GAAG,KAAK,GAAG;AAAA,MACzB,MAAM;AAAA,MACN,MAAM;AAAA,MACN,MAAM;AAAA,MACN,UAAU;AAAA,MACV,UAAU;AAAA,MACV,SAAS;AAAA,IACX,CAAC;AAAA,EACH,CAAC;AACH,CAAC;",
+  "names": []
+}
