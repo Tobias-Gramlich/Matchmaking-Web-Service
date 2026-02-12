@@ -1,3 +1,5 @@
+const {UserAuthenticationHandler} = require('./UserAuthenticationHandler');
+
 // Connection event handler
 const WebSocketHandler = (ws) => {
   console.log('New client connected');
@@ -7,8 +9,20 @@ const WebSocketHandler = (ws) => {
 
   // Message event handler
   ws.on('message', (rawMessage) => {
-    const message = rawMessage.toString();
-    switch (message){
+    let message;
+    try {
+      message = JSON.parse(rawMessage.toString());
+    }
+    catch {
+      ws.send(JSON.stringify({ type: "error", error: "INVALID_JSON" }));
+      return;
+    }
+
+    const {type, payload = {}} = message;
+
+    switch (type){
+      case "user.authenticate": {UserAuthenticationHandler(payload); break}
+
       case "private.create": {console.log("Create"); break}
       case "private.join": {console.log("Join"); break}
       case "private.start": {console.log("Start"); break}
