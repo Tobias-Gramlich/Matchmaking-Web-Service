@@ -1,5 +1,9 @@
 const UserAuthenticationHandler = (payload) => {
-    console.log(payload);
+    if (!payload.accessToken) {
+        return "No Authentication Token";
+    }
+
+    
     
 };
 
