@@ -3,6 +3,8 @@ const {UserAuthenticationHandler} = require('./UserAuthenticationHandler');
 // Connection event handler
 const WebSocketHandler = (ws) => {
   console.log('New client connected');
+
+  let authState = false;
   
   // Send a welcome message to the client
   ws.send('Welcome to the WebSocket server!');
@@ -20,20 +22,30 @@ const WebSocketHandler = (ws) => {
 
     const {type, payload = {}} = message;
 
-    switch (type){
-      case "user.authenticate": {
-        const response = UserAuthenticationHandler(payload);
-        ws.send(response);
-        break
+    if (!authState && type === "user.authenticate"){
+      const response = UserAuthenticationHandler(payload);
+      if (response.error){
+        ws.send(response.error);
       }
+      else {
+        authState = true;
+      };
+    };
 
-      case "private.create": {console.log("Create"); break}
-      case "private.join": {console.log("Join"); break}
-      case "private.start": {console.log("Start"); break}
-      case "private.leave": {console.log("Leave"); break}
+    if (!authState && type !== "user.authenticate"){
+      ws.send("Must log in first");
+    };
 
-      case "public.join": {console.log("Join"); break}
-      case "public.leave": {console.log("Leave"); break}
+    if (authState){
+      switch (type){
+        case "private.create": {console.log("Create"); break}
+        case "private.join": {console.log("Join"); break}
+        case "private.start": {console.log("Start"); break}
+        case "private.leave": {console.log("Leave"); break}
+
+        case "public.join": {console.log("Join"); break}
+        case "public.leave": {console.log("Leave"); break}
+      };
     };
   });
 
