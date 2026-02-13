@@ -4,7 +4,7 @@ const {UserAuthenticationHandler} = require('./UserAuthenticationHandler');
 const WebSocketHandler = (ws) => {
   console.log('New client connected');
 
-  let authState = false;
+  let User = {"userId" : null, "userName" : null};
   
   // Send a welcome message to the client
   ws.send('Welcome to the WebSocket server!');
@@ -22,21 +22,23 @@ const WebSocketHandler = (ws) => {
 
     const {type, payload = {}} = message;
 
-    if (!authState && type === "user.authenticate"){
+    if (!User.userId && type === "user.authenticate"){
       const response = UserAuthenticationHandler(payload);
       if (response.error){
         ws.send(response.error);
       }
       else {
-        authState = true;
+        User.userId = response.userId;
+        User.userName = response.userName;
+        ws.send("Logged in as: " + User.userName);
       };
     };
 
-    if (!authState && type !== "user.authenticate"){
+    if (!User.userId && type !== "user.authenticate"){
       ws.send("Must log in first");
     };
 
-    if (authState){
+    if (User.userId){
       switch (type){
         case "private.create": {console.log("Create"); break}
         case "private.join": {console.log("Join"); break}

@@ -3,7 +3,9 @@ const UserAuthenticationHandler = (payload) => {
         return {"error" : "No Authentication Token"};
     }
 
-    return {}
+    //TODO: Authentication mit Axios
+
+    return {"userId": 1, "userName": "TestName"};
     
 };
 
