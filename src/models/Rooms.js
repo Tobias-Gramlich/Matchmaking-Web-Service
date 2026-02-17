@@ -7,7 +7,8 @@ module.exports = (sequelize, DataTypes) => {
         },
         player2: {
             type: DataTypes.INTEGER,
-            allowNull: false
+            // A room starts with only the host. Additional players join later.
+            allowNull: true
         },
         player3: {
             type: DataTypes.INTEGER
