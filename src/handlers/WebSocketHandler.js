@@ -42,10 +42,12 @@ const WebSocketHandler = (ws) => {
       ws.send("Must log in first");
     };
 
-      case "private.create": {PrivateCreate; break}
-      case "private.join": {PrivateJoin; break}
-      case "private.start": {PrivateStart; break}
-      case "private.leave": {PrivateLeave; break}
+    if (User.userId){
+      switch (type){
+        case "private.create": {PrivateCreate; break}
+        case "private.join": {PrivateJoin; break}
+        case "private.start": {PrivateStart; break}
+        case "private.leave": {PrivateLeave; break}
 
         case "public.join": {console.log("Join"); break}
         case "public.leave": {console.log("Leave"); break}
