@@ -44,10 +44,22 @@ const WebSocketHandler = (ws) => {
 
     if (User.userId){
       switch (type){
-        case "private.create": {PrivateCreate; break}
-        case "private.join": {PrivateJoin; break}
-        case "private.start": {PrivateStart; break}
-        case "private.leave": {PrivateLeave; break}
+        case "private.create": 
+        const p1 = { ...payload, userId: User.userId, userName: User.userName };
+        {PrivateCreate(ws, p1); 
+          break}
+        case "private.join": 
+        const p2 = { ...payload, userId: User.userId, userName: User.userName };
+        {PrivateJoin(ws, p2); 
+          break}
+        case "private.start": 
+        const p3 = { ...payload, userId: User.userId, userName: User.userName };
+        {PrivateStart(ws, p3); 
+          break}
+        case "private.leave": 
+        const p4 = { ...payload, userId: User.userId, userName: User.userName };
+        {PrivateLeave(ws, p4); 
+          break}
 
         case "public.join": {console.log("Join"); break}
         case "public.leave": {console.log("Leave"); break}
