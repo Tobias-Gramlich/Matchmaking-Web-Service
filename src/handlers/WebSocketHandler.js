@@ -2,6 +2,9 @@ const { PrivateCreate } = require('../privateRoomFunctions/PrivateCreate');
 const { PrivateJoin } = require('../privateRoomFunctions/PrivateJoin');
 const { PrivateLeave } = require('../privateRoomFunctions/PrivateLeave');
 const { PrivateStart } = require('../privateRoomFunctions/PrivateStart');
+
+const {PublicJoin} = require('../publicRoomFunctions/PublicJoin');
+const {PublicLeave} = require('../publicRoomFunctions/PublicLeave');
 const {UserAuthenticationHandler} = require('./UserAuthenticationHandler');
 
 // Connection event handler
@@ -49,8 +52,8 @@ const WebSocketHandler = (ws) => {
         case "private.start": {PrivateStart; break}
         case "private.leave": {PrivateLeave; break}
 
-        case "public.join": {console.log("Join"); break}
-        case "public.leave": {console.log("Leave"); break}
+        case "public.join": {PublicJoin(payload); break}
+        case "public.leave": {PublicLeave; break}
       };
     };
   });
