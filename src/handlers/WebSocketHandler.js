@@ -17,7 +17,7 @@ const WebSocketHandler = (ws) => {
   ws.send('Welcome to the WebSocket server!');
 
   // Message event handler
-  ws.on('message', (rawMessage) => {
+  ws.on('message', async (rawMessage) => {
     let message;
     try {
       message = JSON.parse(rawMessage.toString());
@@ -52,7 +52,16 @@ const WebSocketHandler = (ws) => {
         case "private.start": {PrivateStart; break}
         case "private.leave": {PrivateLeave; break}
 
-        case "public.join": {PublicJoin(payload); break}
+        case "public.join": {
+          const response = await PublicJoin(payload);
+          if (response.error){
+            ws.send(response.error);
+          }
+          else {
+            ws.send("Success");
+          }
+          break
+        }
         case "public.leave": {PublicLeave; break}
       };
     };

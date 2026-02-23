@@ -4,6 +4,11 @@ const { Op } = require("sequelize");
 const PublicJoin = async (payload) => {
     const userId = payload.userId;
 
+    // Check if User is already in a Room
+    const checkRooms = await Rooms.findOne({where : {[Op.or]: [{host: userId}, {player2: userId}, {player3: userId}, {player4: userId}]}});
+    if (checkRooms) return {error: "User already in a room"};
+
+    // Find open Rooms
     const rooms = await Rooms.findAll({
         where: {
             state: "open",
@@ -20,12 +25,13 @@ const PublicJoin = async (payload) => {
     });
 
     if (rooms.length === 0) {
-        // Create a Room
+        const newRoom = await Rooms.create({host: userId, state: "open"});
+        return {success: true};
     } 
     else {
-        // Join existing Room
+        return {error: "not implemented"}
     }
-    return;
+    
 };
 
 module.exports = {PublicJoin};

@@ -6,8 +6,7 @@ module.exports = (sequelize, DataTypes) => {
             allowNull: false
         },
         player2: {
-            type: DataTypes.INTEGER,
-            allowNull: false
+            type: DataTypes.INTEGER
         },
         player3: {
             type: DataTypes.INTEGER
