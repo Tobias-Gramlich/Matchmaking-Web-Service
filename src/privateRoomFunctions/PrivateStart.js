@@ -1,38 +1,28 @@
-function getStore() {
-  if (!globalThis.__privateRooms) {
-    globalThis.__privateRooms = {
-      roomsByCode: new Map(),
-      codeBySocket: new Map(),
-      userIdBySocket: new Map(),
-    };
-  }
-  return globalThis.__privateRooms;
+const { Rooms } = require("../models");
+const {
+  getStore,
+  safeSend,
+  broadcastToRoom,
+  dbRoomSnapshot,
+} = require("./privateRoomStore");
+
+function normalizeRoomCode(input) {
+  return (input ?? "").toString().trim();
 }
 
-function safeSend(ws, obj) {
-  try {
-    ws.send(JSON.stringify(obj));
-  } catch (_) {}
+function countPlayers(dbRoom) {
+  let c = 0;
+  if (dbRoom.host != null) c++;
+  if (dbRoom.player2 != null) c++;
+  if (dbRoom.player3 != null) c++;
+  if (dbRoom.player4 != null) c++;
+  return c;
 }
 
-function broadcast(room, obj) {
-  for (const p of room.players) safeSend(p.ws, obj);
-}
-
-function roomSnapshot(room) {
-  return {
-    roomCode: room.roomCode,
-    hostId: room.hostId,
-    state: room.state,
-    players: room.players.map((p) => ({ userId: p.userId, isHost: p.isHost })),
-    maxPlayers: room.maxPlayers,
-  };
-}
-
-function PrivateStart(ws, payload = {}) {
+async function PrivateStart(ws, payload = {}) {
   const store = getStore();
   const userId = payload.userId;
-  const roomCodeFromPayload = (payload.roomCode || "").toString().trim().toUpperCase();
+  const roomCodeFromPayload = normalizeRoomCode(payload.roomCode);
   const roomCode = roomCodeFromPayload || store.codeBySocket.get(ws);
 
   if (userId === undefined || userId === null || userId === "") {
@@ -44,33 +34,34 @@ function PrivateStart(ws, payload = {}) {
     return;
   }
 
-  const room = store.roomsByCode.get(roomCode);
-  if (!room) {
+  const dbRoom = await Rooms.findByPk(roomCode);
+  if (!dbRoom) {
     safeSend(ws, { type: "error", error: "ROOM_NOT_FOUND", payload: { roomCode } });
     return;
   }
 
-  if (String(room.hostId) !== String(userId)) {
+  if (String(dbRoom.host) !== String(userId)) {
     safeSend(ws, { type: "error", error: "ONLY_HOST_CAN_START", payload: { roomCode } });
     return;
   }
 
-  if (room.state !== "lobby") {
+  if (dbRoom.state !== "lobby") {
     safeSend(ws, { type: "error", error: "ROOM_ALREADY_STARTED", payload: { roomCode } });
     return;
   }
 
-  if (room.players.length < 2) {
+  if (countPlayers(dbRoom) < 2) {
     safeSend(ws, { type: "error", error: "NOT_ENOUGH_PLAYERS", payload: { roomCode, minPlayers: 2 } });
     return;
   }
 
-  room.state = "started";
-  room.startedAt = Date.now();
+  dbRoom.state = "started";
+  await dbRoom.save();
 
-  broadcast(room, {
+  const snapshot = dbRoomSnapshot(dbRoom);
+  broadcastToRoom(store, roomCode, {
     type: "private.started",
-    payload: { roomCode, room: roomSnapshot(room) },
+    payload: { roomCode, room: snapshot },
   });
 }
 

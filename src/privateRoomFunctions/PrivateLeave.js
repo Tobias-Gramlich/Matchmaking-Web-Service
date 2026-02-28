@@ -1,96 +1,78 @@
-function getStore() {
-  if (!globalThis.__privateRooms) {
-    globalThis.__privateRooms = {
-      roomsByCode: new Map(),
-      codeBySocket: new Map(),
-      userIdBySocket: new Map(),
-    };
-  }
-  return globalThis.__privateRooms;
+const { Rooms } = require("../models");
+const {
+  getStore,
+  safeSend,
+  removeSocketFromRoom,
+  broadcastToRoom,
+  cleanupRoom,
+  dbRoomSnapshot,
+} = require("./privateRoomStore");
+
+function normalizeRoomCode(input) {
+  return (input ?? "").toString().trim();
 }
 
-function safeSend(ws, obj) {
-  try {
-    ws.send(JSON.stringify(obj));
-  } catch (_) {}
-}
-
-function broadcast(room, obj) {
-  for (const p of room.players) safeSend(p.ws, obj);
-}
-
-function roomSnapshot(room) {
-  return {
-    roomCode: room.roomCode,
-    hostId: room.hostId,
-    state: room.state,
-    players: room.players.map((p) => ({ userId: p.userId, isHost: p.isHost })),
-    maxPlayers: room.maxPlayers,
-  };
-}
-
-function removeSocketFromRoom(room, ws) {
-  const idx = room.players.findIndex((p) => p.ws === ws);
-  if (idx === -1) return null;
-  const [removed] = room.players.splice(idx, 1);
-  return removed;
-}
-
-function PrivateLeave(ws, payload = {}) {
+async function PrivateLeave(ws, payload = {}) {
   const store = getStore();
-  const roomCodeFromPayload = (payload.roomCode || "").toString().trim().toUpperCase();
+
+  const roomCodeFromPayload = normalizeRoomCode(payload.roomCode);
   const roomCode = roomCodeFromPayload || store.codeBySocket.get(ws);
+  const userId = payload.userId ?? store.userIdBySocket.get(ws);
 
   if (!roomCode) {
     safeSend(ws, { type: "error", error: "NOT_IN_ROOM" });
     return;
   }
 
-  const room = store.roomsByCode.get(roomCode);
-  if (!room) {
-    store.codeBySocket.delete(ws);
-    store.userIdBySocket.delete(ws);
+  const dbRoom = await Rooms.findByPk(roomCode);
+  // Always remove socket mapping, even if DB room is gone
+  removeSocketFromRoom(store, ws);
+
+  if (!dbRoom) {
     safeSend(ws, { type: "error", error: "ROOM_NOT_FOUND", payload: { roomCode } });
     return;
   }
 
-  const removed = removeSocketFromRoom(room, ws);
-  store.codeBySocket.delete(ws);
-  store.userIdBySocket.delete(ws);
+  const isHost = String(dbRoom.host) === String(userId);
+  if (isHost) {
+    // Closing room: remove from DB and inform connected sockets
+    await dbRoom.destroy();
+
+    broadcastToRoom(store, roomCode, {
+      type: "private.room.closed",
+      payload: { roomCode, reason: "HOST_LEFT" },
+    });
+
+    cleanupRoom(store, roomCode);
+
+    safeSend(ws, { type: "private.left", payload: { roomCode, closed: true } });
+    return;
+  }
+
+  // Remove player from its slot (if present)
+  let removed = false;
+  if (String(dbRoom.player2) === String(userId)) {
+    dbRoom.player2 = null;
+    removed = true;
+  } else if (String(dbRoom.player3) === String(userId)) {
+    dbRoom.player3 = null;
+    removed = true;
+  } else if (String(dbRoom.player4) === String(userId)) {
+    dbRoom.player4 = null;
+    removed = true;
+  }
 
   if (!removed) {
     safeSend(ws, { type: "error", error: "NOT_IN_ROOM" });
     return;
   }
 
-  const hostLeft = removed.isHost === true;
+  await dbRoom.save();
+  const snapshot = dbRoomSnapshot(dbRoom);
 
-  if (hostLeft) {
-    broadcast(room, {
-      type: "private.room.closed",
-      payload: { roomCode, reason: "HOST_LEFT" },
-    });
-
-    for (const p of room.players) {
-      store.codeBySocket.delete(p.ws);
-      store.userIdBySocket.delete(p.ws);
-    }
-
-    store.roomsByCode.delete(roomCode);
-
-    safeSend(ws, { type: "private.left", payload: { roomCode, closed: true } });
-    return;
-  }
-
-  if (room.players.length === 0) {
-    store.roomsByCode.delete(roomCode);
-    safeSend(ws, { type: "private.left", payload: { roomCode, closed: true } });
-    return;
-  }
-
-  broadcast(room, {
+  broadcastToRoom(store, roomCode, {
     type: "private.room.updated",
-    payload: { roomCode, room: roomSnapshot(room) },
+    payload: { roomCode, room: snapshot },
   });
 
   safeSend(ws, {

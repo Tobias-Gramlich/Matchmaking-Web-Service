@@ -1,40 +1,27 @@
-const MAX_PLAYERS = 4;
+const { Rooms } = require("../models");
+const {
+  getStore,
+  safeSend,
+  addSocketToRoom,
+  broadcastToRoom,
+  dbRoomSnapshot,
+} = require("./privateRoomStore");
 
-function getStore() {
-  if (!globalThis.__privateRooms) {
-    globalThis.__privateRooms = {
-      roomsByCode: new Map(),
-      codeBySocket: new Map(),
-      userIdBySocket: new Map(),
-    };
-  }
-  return globalThis.__privateRooms;
+function normalizeRoomCode(input) {
+  // roomCode is the DB id => must be numeric-ish. Keep as string.
+  return (input ?? "").toString().trim();
 }
 
-function safeSend(ws, obj) {
-  try {
-    ws.send(JSON.stringify(obj));
-  } catch (_) {}
+function listPlayerIds(dbRoom) {
+  return [dbRoom.host, dbRoom.player2, dbRoom.player3, dbRoom.player4].filter(
+    (v) => v !== null && v !== undefined
+  );
 }
 
-function broadcast(room, obj) {
-  for (const p of room.players) safeSend(p.ws, obj);
-}
-
-function roomSnapshot(room) {
-  return {
-    roomCode: room.roomCode,
-    hostId: room.hostId,
-    state: room.state,
-    players: room.players.map((p) => ({ userId: p.userId, isHost: p.isHost })),
-    maxPlayers: room.maxPlayers,
-  };
-}
-
-function PrivateJoin(ws, payload = {}) {
+async function PrivateJoin(ws, payload = {}) {
   const store = getStore();
   const userId = payload.userId;
-  const roomCode = (payload.roomCode || "").toString().trim().toUpperCase();
+  const roomCode = normalizeRoomCode(payload.roomCode);
 
   if (userId === undefined || userId === null || userId === "") {
     safeSend(ws, { type: "error", error: "MISSING_USER_ID" });
@@ -47,49 +34,57 @@ function PrivateJoin(ws, payload = {}) {
 
   const existingCode = store.codeBySocket.get(ws);
   if (existingCode) {
-    safeSend(ws, { type: "error", error: "ALREADY_IN_ROOM", payload: { roomCode: existingCode } });
+    safeSend(ws, {
+      type: "error",
+      error: "ALREADY_IN_ROOM",
+      payload: { roomCode: existingCode },
+    });
     return;
   }
 
-  const room = store.roomsByCode.get(roomCode);
-  if (!room) {
+  const dbRoom = await Rooms.findByPk(roomCode);
+  if (!dbRoom) {
     safeSend(ws, { type: "error", error: "ROOM_NOT_FOUND", payload: { roomCode } });
     return;
   }
 
-  if (room.state !== "lobby") {
-    safeSend(ws, { type: "error", error: "ROOM_ALREADY_STARTED", payload: { roomCode } });
+  if (dbRoom.state !== "lobby") {
+    safeSend(ws, {
+      type: "error",
+      error: "ROOM_ALREADY_STARTED",
+      payload: { roomCode },
+    });
     return;
   }
 
-  if (room.players.length >= (room.maxPlayers || MAX_PLAYERS)) {
-    safeSend(ws, { type: "error", error: "ROOM_FULL", payload: { roomCode } });
-    return;
-  }
-
-  if (room.players.some((p) => String(p.userId) === String(userId))) {
+  const players = listPlayerIds(dbRoom);
+  if (players.some((p) => String(p) === String(userId))) {
     safeSend(ws, { type: "error", error: "USER_ALREADY_IN_ROOM", payload: { roomCode } });
     return;
   }
 
-  room.players.push({
-    userId,
-    ws,
-    isHost: false,
-    joinedAt: Date.now(),
-  });
+  if (players.length >= 4) {
+    safeSend(ws, { type: "error", error: "ROOM_FULL", payload: { roomCode } });
+    return;
+  }
 
-  store.codeBySocket.set(ws, roomCode);
-  store.userIdBySocket.set(ws, userId);
+  // Fill next free slot (player2 -> player4)
+  if (dbRoom.player2 == null) dbRoom.player2 = userId;
+  else if (dbRoom.player3 == null) dbRoom.player3 = userId;
+  else if (dbRoom.player4 == null) dbRoom.player4 = userId;
+  await dbRoom.save();
+
+  addSocketToRoom(store, ws, roomCode, userId);
+  const snapshot = dbRoomSnapshot(dbRoom);
 
   safeSend(ws, {
     type: "private.joined",
-    payload: { roomCode, room: roomSnapshot(room) },
+    payload: { roomCode, room: snapshot },
   });
 
-  broadcast(room, {
+  broadcastToRoom(store, roomCode, {
     type: "private.room.updated",
-    payload: { roomCode, room: roomSnapshot(room) },
+    payload: { roomCode, room: snapshot },
   });
 }
 

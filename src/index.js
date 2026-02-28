@@ -12,7 +12,7 @@ const database = require('./models');
 const {Rooms} = require('./models');
 
 // Initializing Database Connection
-database.sequelize.sync().then(() => {
+database.sequelize.sync({ alter: true }).then(() => {
     app.listen(3001, () => {
         console.log("Server Running");
     });
