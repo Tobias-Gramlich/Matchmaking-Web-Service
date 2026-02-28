@@ -2,6 +2,9 @@ const { PrivateCreate } = require('../privateRoomFunctions/PrivateCreate');
 const { PrivateJoin } = require('../privateRoomFunctions/PrivateJoin');
 const { PrivateLeave } = require('../privateRoomFunctions/PrivateLeave');
 const { PrivateStart } = require('../privateRoomFunctions/PrivateStart');
+
+const {PublicJoin} = require('../publicRoomFunctions/PublicJoin');
+const {PublicLeave} = require('../publicRoomFunctions/PublicLeave');
 const {UserAuthenticationHandler} = require('./UserAuthenticationHandler');
 
 function safeSend(ws, obj) {
@@ -20,7 +23,7 @@ const WebSocketHandler = (ws) => {
   ws.send('Welcome to the WebSocket server!');
 
   // Message event handler
-  ws.on('message', (rawMessage) => {
+  ws.on('message', async (rawMessage) => {
     let message;
     try {
       message = JSON.parse(rawMessage.toString());
@@ -90,8 +93,17 @@ const WebSocketHandler = (ws) => {
           break;
         }
 
-        case "public.join": {console.log("Join"); break}
-        case "public.leave": {console.log("Leave"); break}
+        case "public.join": {
+          const response = await PublicJoin(payload);
+          if (response.error){
+            ws.send(response.error);
+          }
+          else {
+            ws.send("Success");
+          }
+          break
+        }
+        case "public.leave": {PublicLeave; break}
       };
     };
   });
