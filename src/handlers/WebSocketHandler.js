@@ -17,7 +17,7 @@ function safeSend(ws, obj) {
 const WebSocketHandler = (ws) => {
   console.log('New client connected');
 
-  let User = {"userId" : 1, "userName" : "Test"};
+  let User = {};
 
   // Send a welcome message to the client
   ws.send('Welcome to the WebSocket server!');
@@ -36,7 +36,7 @@ const WebSocketHandler = (ws) => {
     const {type, payload = {}} = message;
 
     if (!User.userId && type === "user.authenticate"){
-      const response = UserAuthenticationHandler(payload);
+      const response = await UserAuthenticationHandler(payload);
       if (response.error){
         ws.send(response.error);
       }

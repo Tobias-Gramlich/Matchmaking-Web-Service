@@ -1,0 +1,43 @@
+services:
+  db:
+    image: mariadb:11
+    container_name: matchmaking-db
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: ${DB_NAME}
+      MARIADB_USER: ${DB_USER}
+      MARIADB_PASSWORD: ${DB_PASSWORD}
+      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD}
+    ports:
+      - ${DOCKER_DB_PORT}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mariadb-admin", "ping", "-h", "localhost", "-p${DB_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: matchmaking-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    
+    env_file:
+      - ./.env
+
+    environment:
+      DB_HOST: db
+      DB_PORT: 3306
+
+    ports:
+      - ${DOCKER_PORT}
+      - ${DOCKER_WS_PORT}
+
+volumes:
+  db_data:
