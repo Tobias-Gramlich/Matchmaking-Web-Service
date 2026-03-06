@@ -1,13 +1,13 @@
 const axios = require('axios');
+require("dotenv").config("../../.env");
 
 const UserAuthenticationHandler = async (payload) => {
     if (!payload.accessToken) {
         return {"error" : "No Authentication Token"};
     }
 
-    //TODO: Other Connection Path
     try{
-        const response = await axios.post("http://localhost:3001/Users/auth", payload)
+        const response = await axios.post(process.env.USER_MANAGEMENT_ROUTE, payload)
         if(response.data.error){
             return {"error": response.data.error};
         }

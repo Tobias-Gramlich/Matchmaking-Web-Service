@@ -13,8 +13,8 @@ const {Rooms} = require('./models');
 
 // Initializing Database Connection
 database.sequelize.sync({ alter: true }).then(() => {
-    app.listen(3001, () => {
-        console.log("Server Running");
+    app.listen(process.env.PORT || 3001, () => {
+        console.log(`Server Running on Port ${process.env.PORT}`);
     });
 }).catch((error) => {
     console.log(error);

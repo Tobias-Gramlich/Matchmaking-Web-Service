@@ -1,0 +1,15 @@
+# Node Modules
+node_modules
+
+# Git
+.git
+.gitignore
+
+# README
+README.md
+
+# Docker
+docker-compose.yml
+
+# Env
+.env
