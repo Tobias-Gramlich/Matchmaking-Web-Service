@@ -1,5 +1,6 @@
 const axios = require('axios');
-require("dotenv").config("../../.env");
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 const UserAuthenticationHandler = async (payload) => {
     if (!payload.accessToken) {
@@ -15,7 +16,8 @@ const UserAuthenticationHandler = async (payload) => {
             return {"userName": response.data.username, "userId": response.data.userId};
         }
     }
-    catch{
+    catch (err){
+        console.log(err);
         return{"error": "Something went wrong"}
     }
 };
