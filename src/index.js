@@ -1,3 +1,7 @@
+// .env Import
+const path = require("path");
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
+
 // Express Configuration
 const express = require('express');
 const app = express();
@@ -9,12 +13,13 @@ app.use(cors());
 
 // Models import
 const database = require('./models');
-const {Rooms} = require('./models');
 
 // Initializing Database Connection
 database.sequelize.sync({ alter: true }).then(() => {
-    app.listen(process.env.PORT || 3001, () => {
-        console.log(`Server Running on Port ${process.env.PORT}`);
+    app.listen(process.env.MATCHMAKING_PORT || 3001, () => {
+        console.log(`----------------------------------------------------`);
+        console.log(`-----Matchmaking Server is running on Port ${process.env.MATCHMAKING_PORT}-----`);
+        console.log(`----------------------------------------------------`);
     });
 }).catch((error) => {
     console.log(error);
@@ -25,7 +30,9 @@ const WebSocket = require('ws');
 const { WebSocketHandler } = require('./handlers/WebSocketHandler');
 
 // Create a WebSocket server on port 8080
-const wss = new WebSocket.Server({ port: 8080 });
-console.log('WebSocket server is running on ws://localhost:8080');
+const wss = new WebSocket.Server({ port: parseInt(process.env.MATCHMAKING_WS_PORT, 10) || 8080 });
+console.log(`------------------------------------------------------`);
+console.log(`-----Matchmaing Websocket is running on Port ${process.env.MATCHMAKING_WS_PORT}-----`);
+console.log(`------------------------------------------------------`);
 
 wss.on('connection', WebSocketHandler);
