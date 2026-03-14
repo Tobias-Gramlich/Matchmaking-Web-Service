@@ -1,3 +1,4 @@
+//* Get Store of Rooms
 function getStore() {
   if (!globalThis.__privateRooms) {
     globalThis.__privateRooms = {
@@ -12,14 +13,16 @@ function getStore() {
   return globalThis.__privateRooms;
 }
 
+//* Safe send
 function safeSend(ws, obj) {
   try {
     ws.send(JSON.stringify(obj));
-  } catch (_) {
-    // ignore
+  } catch (error) {
+    console.log(error);
   }
 }
 
+//* Give back Room associated with code
 function ensureRoomSockets(store, roomCode) {
   const code = String(roomCode);
   if (!store.roomSockets.has(code)) {
@@ -28,6 +31,7 @@ function ensureRoomSockets(store, roomCode) {
   return store.roomSockets.get(code);
 }
 
+//* Add Socket to Room
 function addSocketToRoom(store, ws, roomCode, userId) {
   const code = String(roomCode);
   const entry = ensureRoomSockets(store, code);
@@ -36,6 +40,7 @@ function addSocketToRoom(store, ws, roomCode, userId) {
   store.userIdBySocket.set(ws, userId);
 }
 
+//* Remove Socket from Store
 function removeSocketFromRoom(store, ws) {
   const roomCode = store.codeBySocket.get(ws);
   if (!roomCode) return null;
@@ -49,6 +54,7 @@ function removeSocketFromRoom(store, ws) {
   return roomCode;
 }
 
+//* Broadcast to Room
 function broadcastToRoom(store, roomCode, obj) {
   const code = String(roomCode);
   const entry = store.roomSockets.get(code);
@@ -56,6 +62,7 @@ function broadcastToRoom(store, roomCode, obj) {
   for (const ws of entry.sockets) safeSend(ws, obj);
 }
 
+//* Cleanup Room
 function cleanupRoom(store, roomCode) {
   const code = String(roomCode);
   const entry = store.roomSockets.get(code);
@@ -68,6 +75,7 @@ function cleanupRoom(store, roomCode) {
   store.roomSockets.delete(code);
 }
 
+//* Create Room Snapshot
 function dbRoomSnapshot(dbRoom) {
   const players = [];
   if (dbRoom.host != null) players.push({ userId: dbRoom.host, isHost: true });

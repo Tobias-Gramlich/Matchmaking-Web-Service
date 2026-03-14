@@ -31,8 +31,8 @@ const { WebSocketHandler } = require('./handlers/WebSocketHandler');
 
 // Create a WebSocket server on port 8080
 const wss = new WebSocket.Server({ port: parseInt(process.env.MATCHMAKING_WS_PORT, 10) || 8080 });
-console.log(`------------------------------------------------------`);
-console.log(`-----Matchmaing Websocket is running on Port ${process.env.MATCHMAKING_WS_PORT}-----`);
-console.log(`------------------------------------------------------`);
+console.log(`-------------------------------------------------------`);
+console.log(`-----Matchmaking Websocket is running on Port ${process.env.MATCHMAKING_WS_PORT}-----`);
+console.log(`-------------------------------------------------------`);
 
 wss.on('connection', WebSocketHandler);
